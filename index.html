@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>C Web Studio - In-Browser WebAssembly C Compiler & IDE</title>
+  <meta name="description" content="Fast, private client-side C compiler and runner executing entirely inside your browser via WebAssembly. Zero backend servers." />
+  <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+  <link rel="stylesheet" href="./styles/main.css" />
+</head>
+<body>
+  <div class="app-container">
+    <!-- Header Navbar -->
+    <header class="app-header">
+      <!-- Left: Logo & Brand & Live Status -->
+      <div class="brand-section">
+        <div class="brand-icon">C</div>
+        <div class="brand-info">
+          <span class="brand-name">C Studio</span>
+          <span class="brand-badge">WASM</span>
+        </div>
+        <div class="header-divider"></div>
+        <div id="status-indicator" class="status-indicator">
+          <span class="status-dot dot-warn"></span>
+          <span id="status-indicator-text">Loading compiler...</span>
+        </div>
+      </div>
+
+      <!-- Center: Hero Execution Actions -->
+      <div class="center-controls">
+        <button id="btn-run" class="btn btn-run" title="Compile and Execute (Ctrl + Enter)">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+            <polygon points="5 3 19 12 5 21 5 3"></polygon>
+          </svg>
+          <span class="btn-label">Run</span>
+          <kbd class="shortcut-kbd">Ctrl+↵</kbd>
+        </button>
+
+        <button id="btn-compile" class="btn btn-compile" title="Compile only (check syntax & diagnostics)">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path>
+          </svg>
+          <span class="btn-label">Compile</span>
+        </button>
+
+        <button id="btn-stop" class="btn btn-stop" disabled title="Stop running program">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor">
+            <rect x="6" y="6" width="12" height="12"></rect>
+          </svg>
+          <span class="btn-label">Stop</span>
+        </button>
+      </div>
+
+      <!-- Right: Templates & Toolbar Tools -->
+      <div class="actions-section">
+        <!-- Sample Presets Dropdown -->
+        <div class="select-wrapper">
+          <svg class="select-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="16 18 22 12 16 6"></polyline>
+            <polyline points="8 6 2 12 8 18"></polyline>
+          </svg>
+          <select id="template-select" class="custom-select" title="Load C code template">
+            <!-- Populated dynamically via templates.ts -->
+          </select>
+          <span class="select-arrow">▼</span>
+        </div>
+
+        <div class="header-divider"></div>
+
+        <button id="btn-format" class="btn-tool" title="Format code (Shift + Alt + F)">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="21" y1="10" x2="3" y2="10"></line>
+            <line x1="21" y1="6" x2="3" y2="6"></line>
+            <line x1="21" y1="14" x2="3" y2="14"></line>
+            <line x1="21" y1="18" x2="3" y2="18"></line>
+          </svg>
+        </button>
+
+        <button id="btn-clear" class="btn-tool" title="Clear terminal output">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="15" y1="9" x2="9" y2="15"></line>
+            <line x1="9" y1="9" x2="15" y2="15"></line>
+          </svg>
+        </button>
+
+        <button id="btn-reset" class="btn-tool" title="Reset code to default template">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+            <polyline points="3 3 3 8 8 8"></polyline>
+          </svg>
+        </button>
+
+        <button id="btn-upload" class="btn-tool" title="Upload .c file">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="17 8 12 3 7 8"></polyline>
+            <line x1="12" y1="3" x2="12" y2="15"></line>
+          </svg>
+        </button>
+        <input type="file" id="file-upload" accept=".c,.h,.cpp" style="display: none;" />
+
+        <button id="btn-download" class="btn-tool" title="Download main.c file">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="7 10 12 15 17 10"></polyline>
+            <line x1="12" y1="15" x2="12" y2="3"></line>
+          </svg>
+        </button>
+
+        <div class="header-divider"></div>
+
+        <button id="btn-settings" class="btn-tool" title="Compiler & editor settings">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+          </svg>
+        </button>
+
+        <button id="btn-theme-toggle" class="btn-tool" title="Toggle Light/Dark Theme">
+          <svg id="theme-icon-sun" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="5"></circle>
+            <line x1="12" y1="1" x2="12" y2="3"></line>
+            <line x1="12" y1="21" x2="12" y2="23"></line>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+            <line x1="1" y1="12" x2="3" y2="12"></line>
+            <line x1="21" y1="12" x2="23" y2="12"></line>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+          </svg>
+          <svg id="theme-icon-moon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: none;">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- First-time Initial Download Progress Banner -->
+    <div id="progress-banner" class="progress-banner">
+      <div class="progress-info">
+        <span id="progress-text">Initializing compiler subsystem...</span>
+      </div>
+      <div class="progress-bar-bg">
+        <div id="progress-bar-fill" class="progress-bar-fill"></div>
+      </div>
+    </div>
+
+    <!-- Mobile Tabs (Visible only on <= 768px) -->
+    <div class="mobile-tabs">
+      <button class="tab-btn active" data-tab="code">Editor (main.c)</button>
+      <button class="tab-btn" data-tab="output">Terminal Output</button>
+      <button class="tab-btn" data-tab="stdin">Stdin Input</button>
+    </div>
+
+    <!-- Workspace (Editor + Splitter + Terminal/Stdin) -->
+    <main class="workspace-container">
+      <!-- Editor Pane -->
+      <section id="editor-pane" class="editor-pane">
+        <!-- Editor Tab Strip -->
+        <div class="editor-tab-strip">
+          <div class="tab-strip-left">
+            <div class="file-tab active">
+              <span class="file-ext">.c</span>
+              <span class="file-name">main.c</span>
+            </div>
+          </div>
+          <div class="tab-strip-right">
+            <span class="c17-pill">C17</span>
+            <span class="save-status-text">● Auto-saved</span>
+          </div>
+        </div>
+        <div id="editor-container" class="editor-container"></div>
+      </section>
+
+      <!-- Horizontal Splitter -->
+      <div id="h-splitter" class="splitter-h" title="Drag to resize panels"></div>
+
+      <!-- Right Pane (Terminal + Stdin with Tab Switcher) -->
+      <section id="right-pane" class="right-pane">
+        <!-- Right Panel Header with View Mode Tabs -->
+        <div class="right-panel-header">
+          <div class="pane-tabs">
+            <button class="pane-tab active" data-pane="terminal">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="4 17 10 11 4 5"></polyline>
+                <line x1="12" y1="19" x2="20" y2="19"></line>
+              </svg>
+              <span>Terminal</span>
+              <span id="terminal-badge" class="terminal-badge badge-idle">Ready</span>
+            </button>
+            <button class="pane-tab" data-pane="stdin">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="2" y="4" width="20" height="16" rx="2" ry="2"></rect>
+                <line x1="6" y1="8" x2="6" y2="8"></line>
+                <line x1="10" y1="8" x2="10" y2="8"></line>
+                <line x1="14" y1="8" x2="14" y2="8"></line>
+                <line x1="18" y1="8" x2="18" y2="8"></line>
+                <line x1="8" y1="16" x2="16" y2="16"></line>
+              </svg>
+              <span>Input (stdin)</span>
+            </button>
+            <button class="pane-tab" data-pane="split" title="Split view (both)">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                <line x1="3" y1="14" x2="21" y2="14"></line>
+              </svg>
+              <span>Split</span>
+            </button>
+          </div>
+
+          <div class="panel-actions">
+            <span id="execution-metrics" class="execution-metrics">0.00s</span>
+            <button id="btn-copy-output" class="btn-icon" title="Copy output">Copy</button>
+            <button id="btn-clear-term" class="btn-icon" title="Clear console">Clear</button>
+          </div>
+        </div>
+
+        <!-- Terminal Output -->
+        <div id="terminal-pane" class="terminal-pane">
+          <div id="terminal-output" class="terminal-output" tabindex="0"></div>
+        </div>
+
+        <!-- Vertical Splitter -->
+        <div id="v-splitter" class="splitter-v" title="Drag to resize terminal / input"></div>
+
+        <!-- Stdin Input Box -->
+        <div id="stdin-pane" class="stdin-pane">
+          <div class="stdin-header-bar">
+            <div class="preset-chip-list">
+              <span class="preset-label">Presets:</span>
+              <button class="preset-btn active" data-value="10 20">[ 10 20 ]</button>
+              <button class="preset-btn" data-value="42 100">[ 42 100 ]</button>
+              <button class="preset-btn" data-value="12">[ 12 ]</button>
+              <button class="preset-btn" data-value="50">[ 50 ]</button>
+            </div>
+            <span class="stdin-hint">Passed to scanf() / getchar()</span>
+          </div>
+          <textarea
+            id="stdin-input"
+            class="stdin-textarea"
+            placeholder="Type input data here for programs using scanf(...) or getchar(). Example: 10 20"
+            spellcheck="false"
+          ></textarea>
+        </div>
+      </section>
+    </main>
+
+    <!-- Footer Status Bar -->
+    <footer class="app-footer">
+      <div class="footer-left">
+        <span class="footer-item">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="4 17 10 11 4 5"></polyline>
+            <line x1="12" y1="19" x2="20" y2="19"></line>
+          </svg>
+          <span>wasm32-wasi</span>
+        </span>
+        <span class="footer-separator">•</span>
+        <span class="footer-item">
+          <span>Clang 15.0.7</span>
+        </span>
+      </div>
+      <div class="footer-right">
+        <span id="cursor-position" class="footer-item">Ln 1, Col 1</span>
+        <span class="footer-separator">•</span>
+        <span class="footer-item">Spaces: 4</span>
+        <span class="footer-separator">•</span>
+        <span class="footer-item">C17</span>
+        <span class="footer-separator">•</span>
+        <span class="footer-item">UTF-8</span>
+      </div>
+    </footer>
+  </div>
+
+  <!-- Settings Modal -->
+  <div id="modal-settings" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2>Compiler & Editor Settings</h2>
+        <button class="btn-icon" data-close-modal="modal-settings">✕</button>
+      </div>
+      <form id="form-settings">
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label" for="setting-std">C Language Standard</label>
+            <select id="setting-std" class="form-control">
+              <option value="c11">C11 (Recommended - ISO/IEC 9899:2011)</option>
+              <option value="c17">C17 (ISO/IEC 9899:2018)</option>
+              <option value="c99">C99 (ISO/IEC 9899:1999)</option>
+            </select>
+            <span class="form-help">Passed to compiler flag -std=&lt;val&gt;</span>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="setting-opt">Optimization Level</label>
+            <select id="setting-opt" class="form-control">
+              <option value="0">-O0 (No optimization, faster compile)</option>
+              <option value="1">-O1 (Basic optimization)</option>
+              <option value="2" selected>-O2 (Recommended - Balanced)</option>
+              <option value="3">-O3 (Aggressive performance optimization)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="setting-timeout">Execution Timeout Limit</label>
+            <select id="setting-timeout" class="form-control">
+              <option value="3">3 seconds</option>
+              <option value="5">5 seconds</option>
+              <option value="10" selected>10 seconds (Recommended)</option>
+              <option value="30">30 seconds</option>
+            </select>
+            <span class="form-help">Prevents infinite loops (e.g. while(1)) from exhausting browser resources</span>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="setting-font-size">Editor Font Size (px)</label>
+            <input type="number" id="setting-font-size" class="form-control" min="10" max="28" value="14" />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="setting-tab-size">Indentation / Tab Size</label>
+            <select id="setting-tab-size" class="form-control">
+              <option value="2">2 spaces</option>
+              <option value="4" selected>4 spaces</option>
+            </select>
+          </div>
+
+          <div class="form-group" style="flex-direction: row; align-items: center; gap: 8px;">
+            <input type="checkbox" id="setting-minimap" checked />
+            <label class="form-label" for="setting-minimap" style="cursor: pointer;">Enable Editor Minimap</label>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-icon" data-close-modal="modal-settings">Cancel</button>
+          <button type="submit" class="btn btn-run">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script type="module" src="./src/main.ts"></script>
+</body>
+</html>

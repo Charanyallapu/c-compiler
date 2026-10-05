@@ -1,0 +1,21 @@
+{
+  "name": "c-web-compiler",
+  "version": "1.0.0",
+  "description": "100% Client-Side WebAssembly C Compiler and Code Runner",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "test:compiler": "node test-suite.js",
+    "test:50": "node run-50-tests.js"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.4",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.2"
+  },
+  "dependencies": {
+    "monaco-editor": "^0.57.0"
+  }
+}
